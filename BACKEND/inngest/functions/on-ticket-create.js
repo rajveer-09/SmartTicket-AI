@@ -1,8 +1,8 @@
-import { inngest } from "./client.js";
-import  User from "../models/user.js";
+import { inngest } from "../client.js";
+import Ticket from "../../models/ticket.model.js";
+import User from "../../models/user.model.js";
 import { NonRetriableError } from "inngest";
-import { sendMail } from "../utils/email.js";
-import Ticket from "../models/ticket.js";
+import { sendMail } from "../../utils/mailer.js";
 import analyzeTicket from "../../utils/ai.js";
 
 export const onTicketCreated = inngest.createFunction(
@@ -22,7 +22,7 @@ export const onTicketCreated = inngest.createFunction(
        await step.run("update-ticket-status", async () => {
            await Ticket.findOneAndUpdate(
                { _id: ticketId },   
-               { status: "open" },
+               { status: "TODO" },
                { new: true }
            );
        });
@@ -49,7 +49,7 @@ export const onTicketCreated = inngest.createFunction(
            let user = await  User.findOne({
             role: "moderator",
             skills: {
-                elemMatch:{
+                $elemMatch: {
                     $regex: relatedSkills.join("|"),
                     $options: "i",
                 },
@@ -61,7 +61,7 @@ export const onTicketCreated = inngest.createFunction(
            }
 
            await Ticket.findByIdAndUpdate(ticketId, {
-               assignedTo: user ? user._id : null,
+               assignedTo: user?._id || null,
            });
 
            return user;
@@ -69,8 +69,10 @@ export const onTicketCreated = inngest.createFunction(
 
        await step.run("send-notification", async () => {
            if (moderator) {
-               const subject = `New Ticket Assigned: ${ticket.title}`;
-               const message = `Hello ${moderator.name},\n\nA new ticket has been assigned to you:\n\nTitle: ${ticket.title}\nDescription: ${ticket.description}\nPriority: ${ticket.priority}\n\nPlease check the ticket and take necessary actions.\n\nBest regards,\nTicketing System Team`;
+               const finalTicket = await Ticket.findById(ticket._id);
+               
+               const subject = `New Ticket Assigned: ${finalTicket.title}`;
+               const message = `Hello ${moderator.name},\n\nA new ticket has been assigned to you:\n\nTitle: ${finalTicket.title}\nDescription: ${finalTicket.description}\nPriority: ${finalTicket.priority}\n\nPlease check the ticket and take necessary actions.\n\nBest regards,\nTicketing System Team`;
 
                await sendMail(moderator.email, subject, message);
            }

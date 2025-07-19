@@ -1,24 +1,25 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import User from "../models/user.js";
-import { Inngest } from "inngest";
-import { use } from "react";
+import User from "../models/user.model.js";
+import { inngest } from "../inngest/client.js";
 
 export const signUp = async (req, res) => {
-  const { email, password, skills = []} = req.body;
+  const {name, email, password, skills = []} = req.body;
 
   try {
-    // Check if user already exists
+     if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email, and password are required" });
+    }
+
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user
     const user = await User.create({
+      name,
       email : email.toLowerCase(),
       password: hashedPassword,
       skills,
@@ -32,9 +33,12 @@ export const signUp = async (req, res) => {
         }
     })
     // Generate JWT token
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    res.status(201).json({user, token })
+    const userObj = user.toObject();
+    delete userObj.password;
+
+    res.status(201).json({ user: userObj, token });
   } 
   catch (error) {
     console.error("Error signing up:", error);
@@ -43,27 +47,31 @@ export const signUp = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { email, hashedPassword} = req.body;
+  const { email, password } = req.body;
 
   try {
-    // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    
-    if (!existingUser) {
-      return res.status(400).json({ message: "User does not exist" });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
     }
 
-    // Check password
-    const isMatch = await bcrypt.compare(hashedPassword, existingUser.password);
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+
+    if (!existingUser) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const isMatch = await bcrypt.compare(password, existingUser.password);
 
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Generate JWT token
-    const token = jwt.sign({ id: existingUser._id, role: existingUser.role }, process.env.JWT_SECRET);
+    const token = jwt.sign({ id: existingUser._id, role: existingUser.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    res.status(200).json({ user: existingUser, token });
+    const userObj = existingUser.toObject();
+    delete userObj.password;
+
+    res.status(200).json({ user: userObj, token });
   } 
   catch (error) {
     console.error("Error logging in:", error);
@@ -95,24 +103,31 @@ export const logout = async (req, res) => {
 };
 
 export const updateUser = async (req, res) => {
-  const {skills = [], role, email} = req.body;
+  const { skills = [], role, email } = req.body;
 
   try {
-    if(req.user?.role !== "admin" && req.user.email !== email) {
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    if (!req.user || (req.user.role !== "admin" && req.user.email !== email.toLowerCase())) {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    const user = await User.findOne({email: email.toLowerCase()});
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    await user.updateOne(
-      {email: email.toLowerCase()},
-      {skills: skills.length ? skills : user.skills, role},
-    )
+    if (skills.length) user.skills = skills;
+    if (role && req.user.role === "admin") user.role = role;
 
-    res.status(200).json({ message: "User updated successfully", user });
+    await user.save();
+
+    const userObj = user.toObject();
+    delete userObj.password;
+
+    res.status(200).json({ message: "User updated successfully", user: userObj });
   } 
   catch (error) {
     console.error("Error updating user:", error);
@@ -120,17 +135,18 @@ export const updateUser = async (req, res) => {
   }
 };
 
+
 export const getUsers = async (req, res) => {
   try {
-    if(req.user?.role !== "admin"){
-        return res.status(403).json({ message: "Forbidden" });
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     const users = await User.find().select("-password");
     res.status(200).json(users);
   } 
   catch (error) {
-    console.error("Error fetching user:", error);
+    console.error("Error fetching users:", error);
     res.status(500).json({ message: "Internal server error" });
   }
-}
+};
