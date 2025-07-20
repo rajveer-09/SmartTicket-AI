@@ -68,7 +68,6 @@ SmartTicket-AI
 │   ├── index.tsx
 │   ├── package.json
 ├── README.md   
-
 ```
 ---
 
