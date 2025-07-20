@@ -102,6 +102,21 @@ const TicketDetailPage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {ticket.helpfulNotes && (
+            <div className="mt-8">
+              <h2 className="text-lg font-semibold text-sky-400 mb-3 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
+                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  className="mr-2"><path d="M12 8V4H8" /><rect x="8" y="12" width="8" height="8" rx="2" /><path d="M8 12v-2a2 2 0 0 1 2-2h4v4" /></svg>
+                Helpful Notes
+              </h2>
+              <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                <p className="text-slate-300 whitespace-pre-wrap text-sm">{ticket.helpfulNotes}</p>
+              </div>
+            </div>
+          )}
+
         </div>
 
         <div className="md:col-span-1">

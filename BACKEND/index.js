@@ -18,11 +18,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/auth", userRoutes)
-app.use("/tickets", ticketRoutes)
+app.use("/api/auth", userRoutes)
+app.use("/api/tickets", ticketRoutes)
 
 app.use(
-  "/inngest",
+  "/api/inngest",
   serve({
     client: inngest,
     functions: [onSignup, onTicketCreated],

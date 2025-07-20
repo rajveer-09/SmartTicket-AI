@@ -14,6 +14,7 @@ Your job is to:
 2. Estimate its priority.
 3. Provide helpful notes and resource links for human moderators.
 4. List relevant technical skills required.
+5. Keep Helpul Notes Crisp 2-4 lines only
 
 IMPORTANT:
 - Respond with *only* valid raw JSON.
