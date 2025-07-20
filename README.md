@@ -68,8 +68,8 @@ ChatBot
 
 1️⃣ Clone the repo  
 ```
-git clone https://github.com/rajveer-09/Smart-Ticketing-AI-Agent.git
-cd Smart-Ticketing-AI-Agent/BACKEND
+git clone https://github.com/rajveer-09/SmartTicket-AI.git
+cd SmartTicket-AI/BACKEND
 ```
 
 ## 2️⃣ Install Backend Dependencies
@@ -91,7 +91,7 @@ EMAIL_PASS=your_email_password
 ## 4️⃣ Run the Server
 ```
 npm start
-Server runs at ➔ http://localhost:5000/
+Server runs at ➔ http://localhost:3000/
 
 ```
 
