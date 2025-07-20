@@ -25,30 +25,83 @@ This system automatically assigns tickets, suggests helpful notes, matches skill
 - **AI Integration:** Google AI Studio (Gemini API)  
 - **Background Jobs:** Inngest  
 - **Email Service:** Nodemailer  
-- **Database:** (Add your DB here, e.g. MongoDB)  
-- **Frontend:** (Optional — your frontend tech)  
+- **Database:** (MongoDB)  
+- **Frontend:** (Vite React)  
 
 ---
+
+### 🗺️ System Overview
+```
+
+                                Client App ──▶ Express Server ──▶ MongoDB
+                                                      │  
+                                                      ├──▶ Inngest Queue ──▶ Google Gemini AI  
+                                                      └──▶ Nodemailer  
+
+```
+
+## 📊 System Architecture
+```
+                                    ┌───────────────────────────────────────────────────────┐
+                                    │                    Client Application                 │
+                                    └──────────────────────────┬────────────────────────────┘
+                                                               │
+                                    ┌──────────────────────────▼────────────────────────────┐
+                                    │                   Express Server                      │
+                                    │  ┌─────────────┐  ┌─────────────┐  ┌───────────────┐  │
+                                    │  │ Auth Routes │  │Ticket Routes│  │ Admin Routes  │  │
+                                    │  └─────────────┘  └─────────────┘  └───────────────┘  │
+                                    └───────────┬──────────────────────────────┬────────────┘
+                                                │                              │
+                                    ┌───────────▼─────────────┐    ┌──────────▼───────────┐
+                                    │       MongoDB           │    │   Inngest Queue      │
+                                    │  ┌───────────────────┐  │    │  ┌────────────────┐  │
+                                    │  │     Tickets       │  │    │  │  AI Processing │  │
+                                    │  ├───────────────────┤  │    │  ├────────────────┤  │
+                                    │  │     Users         │  │    │  │ Notifications  │  │
+                                    │  ├───────────────────┤  │    │  ├────────────────┤  │
+                                    │  │   Moderators      │  │    │  │  Assignments   │  │
+                                    │  └───────────────────┘  │    │  └────────────────┘  │
+                                    └─────────────────────────┘    └──────────────────────┘
+                                                │                              │
+                                                └──────────────┬───────────────┘
+                                                               │
+                                                     ┌─────────▼─────────┐
+                                                     │  Google Gemini AI │
+                                                     └───────────────────┘
+
+```
 
 ## 📂 Project Folder Structure  
 
 ```
-ChatBot
+SmartTicket-AI
 ├── BACKEND
-│ ├── controllers
-│ ├── middlewares
-│ ├── models
-│ ├── routes
-│ ├── utils
-│ ├── inngest # Inngest background handlers
-│ ├── .env
-│ ├── .gitignore
-│ ├── index.js # App Entry Point
-│ ├── package.json
+│   ├── controllers
+│   ├── middlewares
+│   ├── models
+│   ├── routes
+│   ├── utils
+│   ├── inngest
+│   ├── .env
+│   ├── index.js
+│   ├── package.json
 ├── FRONTEND
-```
----
+│   ├── components
+│   │   ├── admin
+│   │   ├── auth
+│   │   ├── common
+│   │   ├── tickets
+│   ├── contexts
+│   ├── hooks
+│   ├── services
+│   ├── .env
+│   ├── App.tsx
+│   ├── index.tsx
+│   ├── package.json
+├── README.md   
 
+```
 ---
 
 ## ⚙️ How AI Agent Works  
@@ -60,81 +113,70 @@ ChatBot
 5️⃣ Auto assigns the ticket to best-fit Moderator  
 6️⃣ Updates ticket **Status**  
 7️⃣ Sends notification emails via **Nodemailer**  
-8️⃣ Runs async jobs using **Inngest**  
+8️⃣ Runs background tasks using **Inngest**  
 
 ---
 
-## 📝 How to Setup Locally  
-
-1️⃣ Clone the repo  
+## 🖥️ Local Setup
+1️⃣ Clone the Repo
 ```
 git clone https://github.com/rajveer-09/SmartTicket-AI.git
 cd SmartTicket-AI/BACKEND
 ```
-
-## 2️⃣ Install Backend Dependencies
+## 2️⃣ Install Dependencies
 ```
 npm install
 ```
-## 3️⃣ Configure Environment Variables
-Create a .env file inside BACKEND/ and add:
+### 3️⃣ Configure .env
 ```
-PORT=5000
-MONGO_URI=your_mongodb_uri
-JWT_SECRET=your_jwt_secret
-AI_API_KEY=your_google_ai_api_key
-EMAIL_USER=your_email@example.com
-EMAIL_PASS=your_email_password
-```
-✅ Make sure .env is added in .gitignore
+MONGO_URI=
+PORT=
+JWT_SECRET=
 
-## 4️⃣ Run the Server
+MAILTRAP_SMTP_HOST=
+MAILTRAP_SMTP_PORT=
+MAILTRAP_SMTP_USER=
+MAILTRAP_SMTP_PASS=
+
+GEMINI_API_KEY=
+APP_URL=
+
+GMAIL_USER=
+GMAIL_PASS=
+INGGEST_SIGNING_KEY=
+```
+✅ Don't forget to add .env in .gitignore
+
+---
+### 4️⃣ Start the Server
 ```
 npm start
-Server runs at ➔ http://localhost:3000/
-
 ```
 
-## 📨 Email Notifications via Nodemailer
+### 🚀 Deployment Tips
+- Recommended Platforms: Render, Railway, Vercel, Heroku
+- Add environment variables securely
+- Keep your secrets safe
+
+### 🤝 Contributing
 ```
-Configure SMTP settings in .env
+Fork & Clone
+Create a new feature branch
+Raise a Pull Request
 ```
+---
+### 👨‍💻 Author
+- Rajveer Sharma
 
-Emails sent on ticket assignment, status update
+[GitHub](https://github.com/rajveer-09) • [LinkedIn](https://www.linkedin.com/in/rajveer-sharma933/)
 
-## 🕒 Background Jobs with Inngest
-- Used for async tasks like:
-- Auto assignment
-- Status updates
-- AI processing
-- Event-driven handlers inside inngest/
+---
 
-## 🤖 AI Integration
-- Google Gemini AI used for:
-- Summarizing tickets
-- Generating helpful notes
-- Skill recommendations
-- Get your API key here
+### 📄 License
+- MIT License
 
-## 📝 Deployment Guide (Optional)
-Use platforms like Render, Railway, Vercel, or Heroku
-Add environment variables to their dashboard
-Don't forget to keep .env safe
-
-## 🤝 Contributing
-- Fork the repository
-- Create a feature branch
-- Raise a Pull Request
-
-## ✨ Author
-Rajveer Sharma
-GitHub • LinkedIn
-
-## 📜 License
-MIT License
-
-## 🙌 Special Thanks
-- Inngest for event-driven jobs
-- Google AI Studio for AI integration
-- Nodemailer for email services
-
+---
+### 🙌 Special Thanks
+- Inngest — Event-driven jobs
+- Google AI Studio — AI Capabilities
+- Nodemailer — Email Services
