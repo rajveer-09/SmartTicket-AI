@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
-    "inngest-dev": "npx inngest-cli@latest dev"
+    "inngest-dev": "npx inngest-cli@latest dev",
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
