@@ -19,7 +19,7 @@ This system automatically assigns tickets, suggests helpful notes, matches skill
 
 ---
 
-## Demo
+## ▶️ Demo
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/d6362102-4843-48e4-9653-d74203e77f16" />
 
 ---
