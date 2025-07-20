@@ -22,7 +22,7 @@ app.use("/auth", userRoutes)
 app.use("/tickets", ticketRoutes)
 
 app.use(
-  "/api/inngest",
+  "/inngest",
   serve({
     client: inngest,
     functions: [onSignup, onTicketCreated],
