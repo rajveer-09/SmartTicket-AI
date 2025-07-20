@@ -19,6 +19,13 @@ This system automatically assigns tickets, suggests helpful notes, matches skill
 
 ---
 
+## Demo
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/d6362102-4843-48e4-9653-d74203e77f16" />
+
+---
+<img width="1919" height="923" alt="image" src="https://github.com/user-attachments/assets/2b70a2dd-75c5-4e32-a719-5a1e32ddf10a" />
+
+
 ## 🛠️ Tech Stack  
 
 - **Backend:** Node.js, Express.js  
