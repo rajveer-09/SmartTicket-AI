@@ -51,6 +51,8 @@ const TicketDetailPage = () => {
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('');
   const [moderatorMessage, setModeratorMessage] = useState('');
+  const [assignedToId, setAssignedToId] = useState<string | null>(null);
+  const [users, setUsers] = useState([]);
 
   const isAdmin = user?.role === Role.ADMIN;
   const isModerator = user?.role === Role.MODERATOR;
@@ -71,6 +73,7 @@ const TicketDetailPage = () => {
         setDescription(fetchedTicket.description);
         setStatus(fetchedTicket.status);
         setModeratorMessage(fetchedTicket.moderatorMessage || '');
+        setAssignedToId(fetchedTicket.assignedTo?._id || null);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch ticket details.');
       } finally {
@@ -79,6 +82,10 @@ const TicketDetailPage = () => {
     };
 
     fetchTicket();
+
+    if (isAdmin) {
+      api.getAllUsers().then(setUsers);
+    }
   }, [id]);
 
   const handleSave = async () => {
@@ -87,12 +94,19 @@ const TicketDetailPage = () => {
       let updated = ticket;
 
       if (isAdmin) {
-        updated = await api.updateTicket(ticket._id, { title, description });
+        updated = await api.updateTicket(ticket._id, {
+          title,
+          description,
+          assignedTo: assignedToId,
+        });
       }
 
       let updatedStatusTicket = updated;
       if (isAdmin || isModerator) {
-        updatedStatusTicket = await api.updateTicketStatus(ticket._id, { status, moderatorMessage });
+        updatedStatusTicket = await api.updateTicketStatus(ticket._id, {
+          status,
+          moderatorMessage,
+        });
       }
 
       setTicket(updatedStatusTicket);
@@ -101,7 +115,6 @@ const TicketDetailPage = () => {
       console.error('Error updating ticket:', err);
     }
   };
-
 
   if (isLoading) return <div className="flex justify-center items-center h-64"><Spinner /></div>;
   if (error) return <div className="text-center text-red-400">{error}</div>;
@@ -190,6 +203,16 @@ const TicketDetailPage = () => {
                   className="w-full p-2 rounded bg-slate-700 text-white"
                   placeholder="Description"
                 />
+                <select
+                  value={assignedToId || ''}
+                  onChange={(e) => setAssignedToId(e.target.value)}
+                  className="w-full p-2 rounded bg-slate-700 text-white"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map(u => (
+                    <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
+                  ))}
+                </select>
               </>
             )}
 

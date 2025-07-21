@@ -110,7 +110,7 @@ export const getTicket = async (req, res) => {
 export const updateTicket = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, moderatorMessage } = req.body;
+    const { title, description, moderatorMessage, assignedTo } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({ message: "Title and description are required" });
@@ -132,6 +132,10 @@ export const updateTicket = async (req, res) => {
       ticket.moderatorMessage = moderatorMessage;
     }
 
+    if (assignedTo !== undefined) {
+      ticket.assignedTo = assignedTo || null;
+    }
+
     await ticket.save();
 
     return res.status(200).json({ message: "Ticket updated successfully", ticket });
@@ -140,6 +144,7 @@ export const updateTicket = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 // Update Ticket Status — Admin, Moderator, Assigned User can update status & moderatorMessage
 export const updateTicketStatus = async (req, res) => {
