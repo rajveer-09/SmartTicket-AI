@@ -1,9 +1,7 @@
 import { inngest } from "../inngest/client.js";
 import Ticket from "../models/ticket.model.js";
-import User from "../models/user.model.js";
 
-
-// Create Ticket
+// ✅ Create Ticket
 export const createTicket = async (req, res) => {
   try {
     const { title, description, priority, deadline, relatedSkills, assignedTo } = req.body;
@@ -32,29 +30,32 @@ export const createTicket = async (req, res) => {
       },
     });
 
-    return res.status(201).json({
-      message: "Ticket created successfully",
-      ticket: newTicket,
-    });
+    return res.status(201).json({ message: "Ticket created successfully", ticket: newTicket });
   } catch (error) {
     console.error("Error creating ticket:", error.message);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// Get All Tickets
+// ✅ Get All Tickets
 export const getTickets = async (req, res) => {
   try {
     const user = req.user;
     let tickets = [];
 
-    if (user.role !== "user") {
+    if (user.role === "admin") {
       tickets = await Ticket.find({})
-        .populate("assignedTo", ["email", "_id"])
+        .populate("assignedTo", ["name", "email", "_id"])
+        .sort({ createdAt: -1 });
+    } else if (user.role === "moderator") {
+      tickets = await Ticket.find({
+        $or: [{ assignedTo: user._id }, { createdBy: user._id }],
+      })
+        .populate("assignedTo", ["name", "email", "_id"])
         .sort({ createdAt: -1 });
     } else {
       tickets = await Ticket.find({ createdBy: user._id })
-        .select("title description status createdAt")
+        .populate("assignedTo", ["name", "email", "_id"])
         .sort({ createdAt: -1 });
     }
 
@@ -65,29 +66,120 @@ export const getTickets = async (req, res) => {
   }
 };
 
-// Get Single Ticket
+// ✅ Get Single Ticket 
 export const getTicket = async (req, res) => {
   try {
     const user = req.user;
     let ticket;
 
-    if (user.role !== "user") {
+    const selectFields = "title description status createdAt priority relatedSkills assignedTo aiNotes helpfulNotes moderatorMessage";
+
+    if (user.role === "admin") {
       ticket = await Ticket.findById(req.params.id)
+        .select(selectFields)
+        .populate("assignedTo", ["name", "email", "_id"]);
+    } else if (user.role === "moderator") {
+      ticket = await Ticket.findOne({
+        _id: req.params.id,
+        $or: [{ assignedTo: user._id }, { createdBy: user._id }],
+      })
+        .select(selectFields)
         .populate("assignedTo", ["name", "email", "_id"]);
     } else {
       ticket = await Ticket.findOne({
-        createdBy: user._id,
         _id: req.params.id,
-      }).populate("assignedTo", ["name", "email", "_id"]);
+        createdBy: user._id,
+      })
+        .select(selectFields)
+        .populate("assignedTo", ["name", "email", "_id"]);
     }
 
     if (!ticket) {
-      return res.status(404).json({ message: "Ticket not found" });
+      return res.status(404).json({ message: "Ticket not found or access denied" });
     }
 
     return res.status(200).json({ ticket });
   } catch (error) {
     console.error("Error fetching ticket:", error.message);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+// Update Ticket — Only Admin 
+export const updateTicket = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, moderatorMessage } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({ message: "Title and description are required" });
+    }
+
+    const ticket = await Ticket.findById(id);
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can update ticket details" });
+    }
+
+    ticket.title = title;
+    ticket.description = description;
+
+    if (moderatorMessage !== undefined) {
+      ticket.moderatorMessage = moderatorMessage;
+    }
+
+    await ticket.save();
+
+    return res.status(200).json({ message: "Ticket updated successfully", ticket });
+  } catch (error) {
+    console.error("Error updating ticket:", error.message);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Update Ticket Status — Admin, Moderator, Assigned User can update status & moderatorMessage
+export const updateTicketStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, moderatorMessage } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: "Status is required" });
+    }
+
+    const allowedStatuses = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const ticket = await Ticket.findById(id);
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    if (
+      req.user.role !== "admin" &&
+      req.user.role !== "moderator" &&
+      ticket.assignedTo?.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: "Not authorized to update this ticket" });
+    }
+
+    ticket.status = status;
+
+    if (moderatorMessage !== undefined) {
+      ticket.moderatorMessage = moderatorMessage;
+    }
+
+    await ticket.save();
+
+    return res.status(200).json({ message: "Ticket status updated", ticket });
+  } catch (error) {
+    console.error("Error updating ticket status:", error.message);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };

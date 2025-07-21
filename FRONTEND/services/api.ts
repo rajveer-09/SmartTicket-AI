@@ -1,8 +1,6 @@
-
 import { Ticket, User } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-
 
 interface LoginData {
   email: string;
@@ -86,7 +84,7 @@ export const api = {
   getTicketById: async (id: string): Promise<Ticket> => {
     const response = await fetchWithAuth(`/tickets/${id}`);
     const data = await response.json();
-    return data.ticket;   // ✅ Extracting ticket object from response
+    return data.ticket;
   },
 
   createTicket: async (data: CreateTicketData): Promise<Ticket> => {
@@ -109,5 +107,23 @@ export const api = {
       body: JSON.stringify(data),
     });
     return response.json();
-  }
+  },
+
+  updateTicket: async (id: string, data: { title: string; description: string }): Promise<Ticket> => {
+    const response = await fetchWithAuth(`/tickets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    const resData = await response.json();
+    return resData.ticket;
+  },
+
+  updateTicketStatus: async (id: string, data: { status: string }): Promise<Ticket> => {
+    const response = await fetchWithAuth(`/tickets/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    const resData = await response.json();
+    return resData.ticket;
+  },
 };

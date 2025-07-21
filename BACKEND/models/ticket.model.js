@@ -14,6 +14,10 @@ const ticketSchema = new mongoose.Schema({
   deadline: Date,
   helpfulNotes: String,
   relatedSkills: [String],
+  moderatorMessage: {
+    type: String,
+    default: "",
+  },
   createdAt: { type: Date, default: Date.now },
 });
 
