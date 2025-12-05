@@ -1,13 +1,10 @@
-import { createAgent, gemini } from "@inngest/agent-kit";
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const analyzeTicket = async (ticket) => {
-  const supportAgent = createAgent({
-    model: gemini({
-      model: "gemini-1.5-flash-8b",
-      apiKey: process.env.GEMINI_API_KEY,
-    }),
-    name: "AI Ticket Triage Assistant",
-    system: `You are an expert AI assistant that processes technical support tickets. 
+
+  const systemInstruction = `You are an expert AI assistant that processes technical support tickets. 
 
 Your job is to:
 1. Summarize the issue.
@@ -21,10 +18,9 @@ IMPORTANT:
 - Do NOT include markdown, code fences, comments, or any extra formatting.
 - The format must be a raw JSON object.
 
-Repeat: Do not wrap your output in markdown or code fences.`,
-  });
+Repeat: Do not wrap your output in markdown or code fences.`;
 
-  const response = await supportAgent.run(`You are a ticket triage agent. Only return a strict JSON object with no extra text, headers, or markdown.
+  const userPrompt = `You are a ticket triage agent. Only return a strict JSON object with no extra text, headers, or markdown.
         
 Analyze the following support ticket and provide a JSON object with:
 
@@ -47,41 +43,51 @@ Respond ONLY in this JSON format and do not include any other text or markdown i
 Ticket information:
 
 - Title: ${ticket.title}
-- Description: ${ticket.description}`);
-
-  // Enhanced response access with multiple fallback options
-  const raw = response?.output?.[0]?.content || 
-              response?.output?.[0]?.context || 
-              response?.content || 
-              response?.text || 
-              response?.data ||
-              response?.message;
+- Description: ${ticket.description}`;
 
   try {
+    // Calling the Gemini API
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-pro",
+      config: {
+        responseMimeType: "application/json", 
+        systemInstruction: systemInstruction,
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: userPrompt }],
+        },
+      ],
+    });
+
+    const raw = response.text; 
+
     // Check if raw response exists
     if (!raw) {
-      console.error("AI response is empty or undefined. Full response structure:", 
-        JSON.stringify(response, null, 2));
+      console.error(
+        "AI response is empty or undefined. Full response structure:",
+        JSON.stringify(response, null, 2)
+      );
       return null;
     }
 
-    // Log raw response for debugging (remove in production)
-    console.log("Raw AI response:", raw);
-
-    // Clean the response string
+    // Cleaning the response string
     let cleanedResponse = String(raw).trim();
 
     // First, try to extract JSON from markdown code blocks (fallback)
-    const markdownMatch = cleanedResponse.match(/``````/i);
+    const markdownMatch = cleanedResponse.match(/```json\n([\s\S]*?)\n```/i) || 
+                          cleanedResponse.match(/```([\s\S]*?)```/i);
+    
     if (markdownMatch) {
       cleanedResponse = markdownMatch[1].trim();
     }
 
     // Remove any leading/trailing text that might interfere with JSON parsing
     // Look for JSON object boundaries
-    const jsonStart = cleanedResponse.indexOf('{');
-    const jsonEnd = cleanedResponse.lastIndexOf('}');
-    
+    const jsonStart = cleanedResponse.indexOf("{");
+    const jsonEnd = cleanedResponse.lastIndexOf("}");
+
     if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
       cleanedResponse = cleanedResponse.substring(jsonStart, jsonEnd + 1);
     }
@@ -90,36 +96,44 @@ Ticket information:
     const parsedResult = JSON.parse(cleanedResponse);
 
     // Validate the required fields
-    if (!parsedResult.summary || !parsedResult.priority || !parsedResult.helpfulNotes || !parsedResult.relatedSkills) {
+    if (
+      !parsedResult.summary ||
+      !parsedResult.priority ||
+      !parsedResult.helpfulNotes ||
+      !parsedResult.relatedSkills
+    ) {
       console.warn("Parsed JSON is missing required fields:", parsedResult);
     }
 
-    // Validate priority value
-    const validPriorities = ['LOW', 'MEDIUM', 'HIGH'];
-    if (!validPriorities.includes(parsedResult.priority)) {
-      console.warn(`Invalid priority "${parsedResult.priority}". Setting to "medium".`);
-      parsedResult.priority = 'medium';
+
+    const validPriorities = ["LOW", "MEDIUM", "HIGH"];
+    if (!validPriorities.includes(parsedResult.priority.toUpperCase())) {
+      console.warn(
+        `Invalid priority "${parsedResult.priority}". Setting to "medium".`
+      );
+      parsedResult.priority = "MEDIUM";
     }
 
-    // Ensure relatedSkills is an array
+
     if (!Array.isArray(parsedResult.relatedSkills)) {
       console.warn("relatedSkills is not an array. Converting to array.");
-      parsedResult.relatedSkills = parsedResult.relatedSkills ? [parsedResult.relatedSkills] : [];
+      parsedResult.relatedSkills = parsedResult.relatedSkills
+        ? [parsedResult.relatedSkills]
+        : [];
     }
 
     return parsedResult;
-
   } catch (e) {
-    console.error("Failed to parse JSON from AI response:", e.message);
-    console.error("Raw response content:", raw);
-    console.error("Full error:", e);
+    // console.error("Failed to parse JSON from AI response:", e.message);
     
-    // Return a fallback response structure to prevent complete failure
+    // console.error("Full error:", e);
+
+   
     return {
       summary: "Unable to process ticket automatically",
       priority: "MEDIUM",
       helpfulNotes: "Manual review required. AI parsing failed.",
-      relatedSkills: ["Manual Review"]
+      relatedSkills: ["Manual Review"],
     };
   }
 };
